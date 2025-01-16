@@ -1,4 +1,4 @@
-class_name ENetMultiplayerConfigLoader
+class_name ENetMultiplayerServiceConfig
 extends RefCounted
 
 const CONFIG_SECTION: StringName = "enet_multiplayer_service"
@@ -55,6 +55,25 @@ static func init_default_plugin_settings() -> void:
       _get_project_setting_path(setting_name),
       setting_value,
       typeof(setting_value)
+    )
+
+
+static func clear_plugin_settings() -> void:
+  for setting_name in DEFAULT_PLUGIN_SETTINGS:
+    var setting_path := _get_project_setting_path(setting_name)
+    if ProjectSettings.has_setting(setting_path):
+      ProjectSettings.clear(setting_path)
+  save_plugin_settings()
+
+
+static func save_plugin_settings() -> void:
+  var result := ProjectSettings.save()
+  if !result == OK:
+    push_error(
+      (
+        "%s: Error while trying to save %s plugin settings in project settings"
+        % [error_string(result), CONFIG_SECTION]
+      )
     )
 
 
