@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://b4xvc6noappek"]
+
+[ext_resource type="Script" path="res://addons/enet-multiplayer-service/enet_multiplayer_service.gd" id="1_5p7us"]
+
+[node name="Node" type="Node"]
+script = ExtResource("1_5p7us")
