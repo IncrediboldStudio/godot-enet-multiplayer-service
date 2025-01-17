@@ -13,3 +13,11 @@ config_version=5
 config/name="godot-enet-multiplayer-service"
 config/features=PackedStringArray("4.3", "Forward Plus")
 config/icon="res://icon.svg"
+
+[autoload]
+
+ENetMultiplayerService="*res://addons/enet-multiplayer-service/enet_multiplayer_service.tscn"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/enet-multiplayer-service/plugin.cfg")
