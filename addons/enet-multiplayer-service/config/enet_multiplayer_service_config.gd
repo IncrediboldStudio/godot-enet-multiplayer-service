@@ -4,7 +4,7 @@ extends RefCounted
 #gdlint: disable=max-line-length
 enum Settings {
   ## The default port the created server listen to for connections
-  DEFAULT_SERVER_PORT,
+  SERVER_PORT,
   ## Maximum number of client connections allowed on the server at once
   MAX_CLIENTS,
   ## Allows to export and deploy the server on a dedicated server
@@ -19,7 +19,7 @@ enum Settings {
 const _CONFIG_SECTION: StringName = "enet_multiplayer_service"
 
 const DEFAULT_PLUGIN_SETTINGS: Dictionary = {
-  Settings.DEFAULT_SERVER_PORT: 31401,
+  Settings.SERVER_PORT: 31401,
   Settings.MAX_CLIENTS: 32,
   Settings.USE_DEDICATED_SERVER: true,
   Settings.USE_UPNP: true
@@ -32,7 +32,14 @@ static func init_plugin_settings() -> void:
     _add_custom_project_settings(
       _get_project_setting_path(key), default_value, typeof(default_value)
     )
-  print("Default enet multiplayer service settings initialized")
+  _save_plugin_settings()
+  print("Enet multiplayer service settings initialized")
+
+
+static func fetch_plugin_settings() -> void:
+  for key: int in Settings.values():
+    var default_value: Variant = DEFAULT_PLUGIN_SETTINGS.values()[key]
+    get_custom_project_settings(_get_project_setting_path(key), default_value)
 
 
 static func _add_custom_project_settings(
@@ -43,7 +50,7 @@ static func _add_custom_project_settings(
   hint_string: String = ""
 ) -> void:
   if ProjectSettings.has_setting(name):
-    ProjectSettings.set_setting(name, ProjectSettings.get_setting(name))
+    ProjectSettings.set_setting(name, ProjectSettings.get_setting_with_override(name))
   else:
     ProjectSettings.set_setting(name, default_value)
 
@@ -53,7 +60,13 @@ static func _add_custom_project_settings(
   ProjectSettings.add_property_info(setting_info)
   ProjectSettings.set_initial_value(name, default_value)
   ProjectSettings.set_as_basic(name, true)
-  print("Setting %s:%s" % [name, ProjectSettings.get_setting(name)])
+
+
+static func get_custom_project_settings(name: StringName, default_value: Variant) -> void:
+  if ProjectSettings.has_setting(name):
+    ProjectSettings.set_setting(name, ProjectSettings.get_setting_with_override(name))
+  else:
+    ProjectSettings.set_setting(name, default_value)
 
 
 static func clear_plugin_settings() -> void:
@@ -71,7 +84,7 @@ static func get_plugin_setting(plugin_setting_key: Settings) -> Variant:
     push_error(
       (
         "Setting %s doesn't exit, available settings are %s"
-        % [setting_path, Settings.keys()]
+        % [setting_path, _get_valid_settings_paths()]
       )
     )
     return null
@@ -91,3 +104,10 @@ static func _save_plugin_settings() -> void:
 
 static func _get_project_setting_path(setting_key: Settings) -> StringName:
   return "%s/%s" % [_CONFIG_SECTION, Settings.keys()[setting_key].to_lower()]
+
+
+static func _get_valid_settings_paths() -> String:
+  var paths = ""
+  for key in Settings.keys():
+    paths += "%s/%s\r" % [_CONFIG_SECTION, key.to_lower()]
+  return paths
