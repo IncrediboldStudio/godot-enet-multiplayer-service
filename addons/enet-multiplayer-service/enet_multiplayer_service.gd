@@ -3,10 +3,13 @@ extends Node
 signal upnp_setup_failed(error: UPNP.UPNPResult)
 signal upnp_setup_completed(ip: String)
 
-var peer: ENetMultiplayerPeer
+var peer := ENetMultiplayerPeer.new()
 var peers_list := {}
 
+var server_ip := "localhost"
 var server_port: int
+var max_client: int
+var use_dedicated_server: bool
 var use_upnp: bool
 
 var upnp: UPNP
@@ -16,8 +19,15 @@ var upnp_mutex: Mutex
 
 func _enter_tree() -> void:
   ENetMultiplayerServiceConfig.fetch_plugin_settings()
+
   server_port = ENetMultiplayerServiceConfig.get_plugin_setting(
     ENetMultiplayerServiceConfig.Settings.SERVER_PORT
+  )
+  max_client = ENetMultiplayerServiceConfig.get_plugin_setting(
+    ENetMultiplayerServiceConfig.Settings.MAX_CLIENTS
+  )
+  use_dedicated_server = ENetMultiplayerServiceConfig.get_plugin_setting(
+    ENetMultiplayerServiceConfig.Settings.USE_DEDICATED_SERVER
   )
   use_upnp = ENetMultiplayerServiceConfig.get_plugin_setting(
     ENetMultiplayerServiceConfig.Settings.USE_UPNP
@@ -32,6 +42,34 @@ func _ready() -> void:
 func _exit_tree() -> void:
   if upnp_thread && upnp_thread.is_alive():
     upnp_thread.wait_to_finish()
+
+
+#region Server
+func create_server() -> void:
+  var result := peer.create_server(server_port, max_client)
+  if result != OK:
+    push_error("[%s] Failed to create server" % error_string(result))
+    return
+  print("Server created at address %s:%s" % [server_ip, server_port])
+  multiplayer.set_multiplayer_peer(peer)
+
+
+#endregion
+
+
+#region Client
+func create_client() -> void:
+  var result := peer.create_client(server_ip, server_port)
+  if result != OK:
+    push_error(
+      "[%s] Failed to connect to server %s:%s" % [error_string(result), server_ip, server_port]
+    )
+    return
+  print("Connected to address %s:%s" % [server_ip, server_port])
+  multiplayer.set_multiplayer_peer(peer)
+
+
+#endregion
 
 
 #region UPnP
@@ -53,7 +91,7 @@ func _upnp_setup() -> void:
     _handle_upnp_error.call_deferred(
       UPNP.UPNP_RESULT_INVALID_GATEWAY, "No valid UPnP gateway found"
     )
-  call_deferred_thread_group("_set_upnp_port_mappings")
+  call_thread_safe("_set_upnp_port_mappings")
   upnp_mutex.unlock()
 
 
@@ -72,8 +110,7 @@ func _set_upnp_port_mappings() -> void:
   )
 
   if upnp_udp_mapping_result["success"] && upnp_tcp_mapping_result["success"]:
-    var external_ip = "%s:%s" % [upnp.query_external_address(), server_port]
-    upnp_setup_completed.emit(external_ip)
+    upnp_setup_completed.emit(upnp.query_external_address())
 
 
 func clear_port_mappings() -> void:
@@ -99,6 +136,10 @@ func _upnp_error_string(error: UPNP.UPNPResult) -> String:
 
 
 func _on_upnp_setup_completed(ip: String) -> void:
-  print(ip)
+  server_ip = ip
+  if use_dedicated_server:
+    create_server()
+  else:
+    create_client()
 
 #endregion

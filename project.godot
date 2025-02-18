@@ -25,4 +25,4 @@ enabled=PackedStringArray("res://addons/enet-multiplayer-service/plugin.cfg")
 
 [enet_multiplayer_service]
 
-server_port=8080
+use_dedicated_server=false
