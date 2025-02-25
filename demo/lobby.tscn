@@ -1,0 +1,69 @@
+[gd_scene load_steps=2 format=3 uid="uid://c5c3a2tt2duyp"]
+
+[ext_resource type="Script" path="res://demo/lobby.gd" id="1_u8mre"]
+
+[node name="Lobby" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_u8mre")
+
+[node name="PlayerList" type="ItemList" parent="."]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(200, 200)
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ContainerServerConnection" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -118.5
+offset_top = -21.5
+offset_right = 118.5
+offset_bottom = 21.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LineEditAddress" type="LineEdit" parent="ContainerServerConnection"]
+unique_name_in_owner = true
+layout_mode = 2
+
+[node name="ButtonContainer" type="HBoxContainer" parent="ContainerServerConnection"]
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="BtnCreateServer" type="Button" parent="ContainerServerConnection/ButtonContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Create Server"
+
+[node name="BtnCreateClient" type="Button" parent="ContainerServerConnection/ButtonContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Create Client"
+
+[node name="ProgressBarUPnP" type="ProgressBar" parent="ContainerServerConnection"]
+unique_name_in_owner = true
+layout_mode = 2
+show_percentage = false
+indeterminate = true
+editor_preview_indeterminate = true
