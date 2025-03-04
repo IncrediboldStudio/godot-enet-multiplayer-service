@@ -1,11 +1,24 @@
 extends Node
+## Provides the methods and signal bindings necessary to create a server
+## as well as create and register client connections
+## All the necessary config options for this class can be found in Project Settings > ENet Multiplayer Service
 
+## Signal emitted when there was an error during the UPnP device discovery or port mapping,
+## see [url=https://docs.godotengine.org/en/stable/classes/class_upnp.html#enum-upnp-upnpresult]UPNPResult[/url]
 signal upnp_setup_failed
+## Signal emitted when the UPnP device discovery and port mapping is successfully completed
+## @tutorial https://docs.godotengine.org/en/stable/classes/class_upnp.html#enum-upnp-upnpresult
+## [param ip] The external IP adress discovered by UPnP where ports have been mapped
 signal upnp_setup_completed(ip: String)
 
+## Signal emitted on all peers when a new client connects to the server
+## [param client_id] The id of the new client
 signal client_connected(client_id: int)
+## Signal emitted on all peers when a client disconnects from the server
 signal client_disconnected
+## Signal emitted when the server disconnects
 signal server_disconnected
+## Signal emitted on all peers when the clients connected to the server changes
 signal client_list_changed
 
 var peer: ENetMultiplayerPeer
@@ -53,10 +66,16 @@ func _ready() -> void:
 func _exit_tree() -> void:
   if upnp_thread:
     upnp_thread.wait_to_finish()
-  clear_port_mappings()
 
 
 #region Server
+
+
+## Creates server that listens to the port set in
+## project setting [i]enet_multiplayer_service/server_port[/i]
+## Returns the [constant OK] if the server is created successfully,
+## [constant ERR_ALREADY_IN_USE] if there is already a server listening on the port or
+## [constant ERR_CANT_CREATE] if the server could not be created.
 func create_server() -> Error:
   peer = ENetMultiplayerPeer.new()
 
@@ -71,8 +90,14 @@ func create_server() -> Error:
 
 #endregion
 
-
 #region Client
+
+
+## Creates client that connects to the [param address] using the port specified in
+## project setting [i]enet_multiplayer_service/server_port[/i]
+## Returns the [constant OK] if the client is created successfully,
+## [constant ERR_ALREADY_IN_USE] if the peer is already connected to a server or
+## [constant ERR_CANT_CREATE] if the client could not be created.
 func create_client(address: String) -> Error:
   peer = ENetMultiplayerPeer.new()
 
@@ -88,6 +113,10 @@ func create_client(address: String) -> Error:
   return result
 
 
+## RPC method sent when a new client connects to the server 
+## to register the new client connection to all other peers connected to the server
+## and add it to each peer's local [member EnetMultiplayerService.client_list].
+## Emits [signal EnetMultiplayerService.client_connected] and [signal EnetMultiplayerService.client_list_changed]
 @rpc("any_peer", "reliable")
 func _register_client() -> void:
   var client_id := multiplayer.get_remote_sender_id()
@@ -96,6 +125,10 @@ func _register_client() -> void:
   client_list_changed.emit()
 
 
+
+## Removes the client with the specified ID from [member EnetMultiplayerService.client_list].
+## Emits [signal EnetMultiplayerService.client_disconnected] and [signal EnetMultiplayerService.client_list_changed]
+## [param client_id] The ID of the client to remove.
 func _remove_client(client_id: int) -> void:
   client_list.erase(client_id)
   client_disconnected.emit(client_id)
@@ -106,19 +139,23 @@ func _remove_client(client_id: int) -> void:
 
 
 #region UPnP
+
+## Initialize a new thread to start UPnP discovery and port mapping asynchronously
 func _init_upnp() -> void:
   upnp = UPNP.new()
   upnp_thread = Thread.new()
   upnp_setup_completed.connect(_on_upnp_setup_completed)
   upnp_thread.start(_upnp_setup)
 
-
+## Discovers the first valid [class UPNPDevice] and creates TCP and UDP port mappings 
+## for the port set in project setting [i]enet_multiplayer_service/server_port[/i].
 func _upnp_setup() -> void:
   upnp_mutex = Mutex.new()
   upnp_mutex.lock()
 
+  # UPnP Device discovery
   var upnp_discovery_result := _handle_upnp_error(upnp.discover(), "UPnP discovery error")
-  if !upnp_discovery_result["success"]:
+  if !upnp_discovery_result:
     return
 
   var upnp_gateway := upnp.get_gateway()
@@ -126,11 +163,8 @@ func _upnp_setup() -> void:
     _handle_upnp_error.call_deferred(
       UPNP.UPNP_RESULT_INVALID_GATEWAY, "No valid UPnP gateway found"
     )
-  call_thread_safe("_set_upnp_port_mappings")
-  upnp_mutex.unlock()
-
-
-func _set_upnp_port_mappings() -> void:
+    
+  # Port mapping
   var upnp_udp_mapping_result: Dictionary = _handle_upnp_error.call(
     upnp.add_port_mapping(
       server_port, server_port, ProjectSettings.get_setting("application/config/name"), "UDP"
@@ -146,21 +180,19 @@ func _set_upnp_port_mappings() -> void:
 
   if upnp_udp_mapping_result["success"] && upnp_tcp_mapping_result["success"]:
     upnp_setup_completed.emit(upnp.query_external_address())
+  upnp_mutex.unlock()
 
 
-func clear_port_mappings() -> void:
-  upnp.delete_port_mapping(server_port, "TCP")
-  upnp.delete_port_mapping(server_port, "UDP")
-
-
-func _handle_upnp_error(result: UPNP.UPNPResult, error_message: String) -> Dictionary:
-  var success: bool = result == UPNP.UPNP_RESULT_SUCCESS
-  if !success:
+## Pushes an error with the human-readable [enum UPNP.UPNPResult] and provided error message.
+## Emits [signal EnetMultiplayerService.upnp_setup_failed]
+## [param error_message]: String The error message to push.
+func _handle_upnp_error(result: UPNP.UPNPResult, error_message: String) -> UPNP.UPNPResult:
+  if result != UPNP.UPNP_RESULT_SUCCESS:
     push_error("[%s]: %s" % [_upnp_error_string(result), error_message])
     upnp_setup_failed.emit.call_deferred()
-  return {"success": success, "result": result}
+  return result
 
-
+## Prints the human-readable [enum UPNP.UPNPResult] value 
 func _upnp_error_string(error: UPNP.UPNPResult) -> String:
   return ClassDB.class_get_enum_constants("UPNP", "UPNPResult")[error]
 
