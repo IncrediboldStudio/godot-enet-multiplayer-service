@@ -13,16 +13,16 @@ func _enable_plugin() -> void:
   if !ProjectSettings.has_setting(AUTOLOAD_OPTIONS_PATH):
     add_autoload_singleton(AUTOLOAD_NAME, AUTOLOAD_PATH)
     print("%s enabled " % AUTOLOAD_NAME)
-    ENetMultiplayerServiceConfig.init_plugin_settings()
+    PluginSettings.init_plugin_settings()
 
 
 func _disable_plugin() -> void:
   if ProjectSettings.has_setting(AUTOLOAD_OPTIONS_PATH):
     remove_autoload_singleton(AUTOLOAD_NAME)
     print("%s disabled " % AUTOLOAD_NAME)
-  ENetMultiplayerServiceConfig.clear_plugin_settings()
+  PluginSettings.clear_plugin_settings()
 
 
 func _enter_tree() -> void:
   print("%s initialized " % AUTOLOAD_NAME)
-  ENetMultiplayerServiceConfig.init_plugin_settings()
+  PluginSettings.init_plugin_settings()

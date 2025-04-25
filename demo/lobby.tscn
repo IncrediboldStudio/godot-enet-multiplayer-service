@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://c5c3a2tt2duyp"]
 
-[ext_resource type="Script" path="res://demo/lobby.gd" id="1_u8mre"]
+[ext_resource type="Script" uid="uid://4sh6gt4d3ny5" path="res://demo/lobby.gd" id="1_u8mre"]
 
 [node name="Lobby" type="Control"]
 layout_mode = 3
@@ -12,19 +12,6 @@ grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("1_u8mre")
-
-[node name="PlayerList" type="ItemList" parent="."]
-unique_name_in_owner = true
-visible = false
-custom_minimum_size = Vector2(200, 200)
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-grow_horizontal = 2
-grow_vertical = 2
 
 [node name="ContainerServerConnection" type="VBoxContainer" parent="."]
 unique_name_in_owner = true
@@ -45,24 +32,73 @@ grow_vertical = 2
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="ButtonContainer" type="HBoxContainer" parent="ContainerServerConnection"]
+[node name="ButtonContainer" type="VBoxContainer" parent="ContainerServerConnection"]
 layout_mode = 2
 size_flags_vertical = 4
 
-[node name="BtnCreateServer" type="Button" parent="ContainerServerConnection/ButtonContainer"]
+[node name="BtnHostLocal" type="Button" parent="ContainerServerConnection/ButtonContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Create Server"
+text = "Host Local"
 
-[node name="BtnCreateClient" type="Button" parent="ContainerServerConnection/ButtonContainer"]
+[node name="BtnHostUPnP" type="Button" parent="ContainerServerConnection/ButtonContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-text = "Create Client"
+text = "Host UPnP"
 
-[node name="ProgressBarUPnP" type="ProgressBar" parent="ContainerServerConnection"]
+[node name="BtnJoin" type="Button" parent="ContainerServerConnection/ButtonContainer"]
 unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Join"
+
+[node name="ContainerLobby" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = -113.5
+offset_right = 100.0
+offset_bottom = 113.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LabelAddress" type="Label" parent="ContainerLobby"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="PlayerList" type="ItemList" parent="ContainerLobby"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 200)
+layout_mode = 2
+
+[node name="ContainerLoading" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 14
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+offset_top = -15.5
+offset_bottom = 15.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LabelLoading" type="Label" parent="ContainerLoading"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="ProgressBarLoading" type="ProgressBar" parent="ContainerLoading"]
 layout_mode = 2
 show_percentage = false
 indeterminate = true
