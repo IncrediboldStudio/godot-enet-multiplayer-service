@@ -24,6 +24,7 @@ var client_list := {}
 var server_ip := "127.0.0.1"
 var server_port: int
 var max_client: int
+var client_connection_timeout: int
 
 var upnp: UPNP
 var upnp_thread: Thread
@@ -35,19 +36,27 @@ func _enter_tree() -> void:
 
   server_port = PluginSettings.get_plugin_setting(PluginSettings.Settings.SERVER_PORT)
   max_client = PluginSettings.get_plugin_setting(PluginSettings.Settings.MAX_CLIENTS)
+  client_connection_timeout = PluginSettings.get_plugin_setting(
+    PluginSettings.Settings.CLIENT_CONNECTION_TIMEOUT
+  )
 
 
 func _ready() -> void:
   multiplayer.peer_connected.connect(_on_peer_connected)
   multiplayer.peer_disconnected.connect(_on_peer_disconnected)
   multiplayer.connected_to_server.connect(_on_client_connected_to_server)
-  multiplayer.connection_failed.connect(_on_client_connection_failed)
   multiplayer.server_disconnected.connect(_on_server_disconnected)
 
 
 func _exit_tree() -> void:
   if upnp_thread:
     upnp_thread.wait_to_finish()
+
+
+func _close_multiplayer_peer() -> void:
+  print_peer("closing peer")
+  multiplayer.multiplayer_peer.close()
+  multiplayer.multiplayer_peer = null
 
 
 #region Server
@@ -62,9 +71,10 @@ func create_server() -> Error:
   var result := peer.create_server(server_port, max_client)
   if result != OK:
     push_error("[%s] Failed to create server" % error_string(result))
+    return result
 
-  print("Server created at address %s:%s" % [server_ip, server_port])
   multiplayer.set_multiplayer_peer(peer)
+  print_peer("Server created at address %s:%s" % [server_ip, server_port])
   return result
 
 
@@ -86,9 +96,9 @@ func create_client(address: String) -> Error:
     )
     return result
 
-  multiplayer.set_multiplayer_peer(peer)
-  server_ip = address
-  print("Client connected at address %s:%s" % [server_ip, server_port])
+  peer.get_peer(1).set_timeout(0, 0, client_connection_timeout)
+  multiplayer.multiplayer_peer = peer
+  print_peer("Starting client connection at address %s:%s" % [address, server_port])
   return result
 
 
@@ -96,13 +106,13 @@ func create_client(address: String) -> Error:
 ## to register the new client connection to all other peers connected to the server
 ## and add it to each peer's local [member EnetMultiplayerService.client_list].
 ## Emits [signal EnetMultiplayerService.client_connected] and [signal EnetMultiplayerService.client_list_changed]
-@rpc("any_peer", "reliable")
+@rpc("any_peer", "call_local", "reliable")
 func _register_client() -> void:
   var client_id := multiplayer.get_remote_sender_id()
   client_list[client_id] = client_id
   client_connected.emit(client_id)
   client_list_changed.emit()
-  print_client("registered %d on %d" % [client_id, multiplayer.get_unique_id()])
+  print_peer("registered %d on %d" % [client_id, multiplayer.get_unique_id()])
 
 
 ## Removes the client with the specified ID from [member EnetMultiplayerService.client_list].
@@ -116,7 +126,7 @@ func _remove_client(client_id: int) -> void:
 
 ## Prints in the console with a random color for each peer
 ## [param message] The message to print in the console.
-func print_client(message: Variant) -> void:
+func print_peer(message: Variant) -> void:
   var color := Color.from_hsv(
     wrapf(str(multiplayer.get_unique_id()).hash() * 0.001, 0.0, 1.0), 0.6, 1.0
   )
@@ -206,28 +216,24 @@ func _upnp_setup() -> void:
 
 #region Signals Callbacks
 func _on_server_disconnected() -> void:
-  multiplayer.multiplayer_peer = null
+  _close_multiplayer_peer()
   client_list.clear()
   print("Server disconnected")
 
 
 func _on_peer_connected(client_id: int) -> void:
-  print_client("%d peer_connected" % client_id)
+  print_peer("%d peer_connected" % client_id)
   _register_client.rpc_id(client_id)
 
 
 func _on_peer_disconnected(client_id: int) -> void:
-  print_client("%d disconnected" % client_id)
+  print_peer("%d disconnected" % client_id)
   _remove_client(client_id)
 
 
 func _on_client_connected_to_server() -> void:
   var client_id := multiplayer.get_unique_id()
   client_connected.emit(client_id)
-  print_client("%d connected_to_server" % client_id)
-
-
-func _on_client_connection_failed() -> void:
-  multiplayer.multiplayer_peer = null
+  print_peer("%d connected_to_server" % client_id)
 
 #endregion

@@ -9,6 +9,8 @@ enum Settings {
   ## Maximum number of client connections allowed on the server at once.
   ## Note that if the server is also a player, it won't count towards the maximum connection limit
   MAX_CLIENTS,
+  ## Timeout for a client peer trying to connect to a server
+  CLIENT_CONNECTION_TIMEOUT,
   ## Allows to export and deploy the server on a dedicated server
   ## @tutorial https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_dedicated_servers.html
   USE_DEDICATED_SERVER
@@ -20,7 +22,10 @@ const _CONFIG_SECTION: StringName = "plugins/enet_multiplayer_service"
 
 ## Default values for the plugin settings.
 const DEFAULT_PLUGIN_SETTINGS: Dictionary = {
-  Settings.SERVER_PORT: 31401, Settings.MAX_CLIENTS: 3, Settings.USE_DEDICATED_SERVER: true
+  Settings.SERVER_PORT: 31401,
+  Settings.MAX_CLIENTS: 3,
+  Settings.CLIENT_CONNECTION_TIMEOUT: 4000,
+  Settings.USE_DEDICATED_SERVER: false
 }
 
 
